@@ -15,7 +15,6 @@ class CrushCache {
 	// the # of seconds may not exceed 2592000 (30 days).
 	private static $cache_expirations_by_table = array(
 		'user' => 3600,
-		'comment' => 1000,
 		'*default' => 3600, // backup default value
 		'*query' => 3600, // default value for getQuery() storages
 	);
@@ -71,15 +70,18 @@ class CrushCache {
 	}
 
 	// unsanitized input!! be sure to make the SQL secure before passing here!
-	public function getQuery($sql) {
+	public function getQuery($sql, $multiple_rows = false, $expiration = -1) {
 		// composes a key such as query:d8e8fca2dc0f896fd7cb4cb0031ba249
 		$cache_key = 'query:'.md5($sql);
 
 		$value = $this->_getFromCache($cache_key);
 		if(!$value){
 			// not in cache, get from SQL and store
-			$value = $this->_getFromDatabase($sql);
-			$expiration = $this->_defaultCacheExpiration('*query');
+			$value = $this->_getFromDatabase($sql, $multiple_rows);
+
+			if ($expiration == -1) {
+				$expiration = $this->_defaultCacheExpiration('*query');
+			}
 			$this->setCache($cache_key, $value, $expiration);
 		}
 		return $value;
@@ -121,7 +123,8 @@ class CrushCache {
 		return self::$cache_expirations_by_table['*default'];
 	}
 
-	private function _getFromDatabase($sql) {
+	// returns a single row of the 
+	private function _getFromDatabase($sql, $multiple_rows = false) {
 		if ($this->sql_db === null) {
 			$this->sql_db = new CrushCacheSQLWrapper(
 				self::$sql_params['host'],
@@ -131,7 +134,11 @@ class CrushCache {
 				self::$sql_params['error_level']
 			);
 		}
-		return $this->sql_db->getOneRow($sql);
+		if ($multiple_rows) {
+			return $this->sql_db->getMultipleRows($sql);
+		} else {
+			return $this->sql_db->getOneRow($sql);
+		}
 	}
 
 } // end CrushCache
