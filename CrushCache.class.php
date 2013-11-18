@@ -1,6 +1,8 @@
 <?php
+require('CrushCacheSQLWrapper.class.php');
 
-class CrushCacheQuery extends CrushCache {
+
+class CrushCache extends CrushCacheSQLWrapper {
 
 	// array of table => indexed_column
 	private $indexed_columns_by_table = array(
@@ -44,7 +46,6 @@ class CrushCacheQuery extends CrushCache {
 		}
 		return $value;
 	}
-
 
 	/**
 	 * @function _getFromCache
