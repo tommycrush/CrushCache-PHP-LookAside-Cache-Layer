@@ -8,13 +8,14 @@ class CrushCache {
 
 	// array of table => indexed_column
 	private static $indexed_columns_by_table = array(
-		"user" => "user_id",
+		'user' => 'user_id',
 	);
 
 	// array of table => cache expirations
 	// the # of seconds may not exceed 2592000 (30 days).
-	private static $default_expires_by_table = array(
-		'user' => 60*60,
+	private static $cache_expirations_by_table = array(
+		'user' => 3600,
+		'comment' => 1000,
 		'*default' => 3600, // backup default value
 		'*query' => 3600, // default value for getQuery() storages
 	);
@@ -52,15 +53,14 @@ class CrushCache {
 	}
 
 	// for now, one at a time
-	public function get($table, $columns, $indexed_column_value) {
-		$cache_key = $table.":".$indexed_column_value;
+	public function get($table, $indexed_column_value) {
+		$cache_key = $table.':'.$indexed_column_value;
 		$value = $this->_getFromCache($cache_key);
 		if(!$value){
 			// not in cache, get from SQL and store
 			$indexed_column = $this->indexed_columns_by_table[$table];
-			$sql = "SELECT ".implode(", ", $columns)." FROM ".$table.
-				" WHERE `".$indexed_column."`= '".$indexed_column_value.
-				"' LIMIT 1";
+			$sql = "SELECT * FROM ".$table." WHERE `".
+				$indexed_column."`= '".$indexed_column_value."' LIMIT 1";
 			$value = $this->_getFromDatabase($sql);
 
 			// save value in cache
@@ -73,7 +73,7 @@ class CrushCache {
 	// unsanitized input!! be sure to make the SQL secure before passing here!
 	public function getQuery($sql) {
 		// composes a key such as query:d8e8fca2dc0f896fd7cb4cb0031ba249
-		$cache_key = "query:".md5($sql);
+		$cache_key = 'query:'.md5($sql);
 
 		$value = $this->_getFromCache($cache_key);
 		if(!$value){
@@ -114,11 +114,11 @@ class CrushCache {
 	}
 
 	// returns the default cache expiration for that table
-	private function _defaultCacheExpiration($table){
-		if (in_array($table, self::$default_expires_by_table)) {
-			return self::$default_expires_by_table[$table];
+	private function _defaultCacheExpiration($table) {
+		if (in_array($table, self::$cache_expirations_by_table)) {
+			return self::$cache_expirations_by_table[$table];
 		}
-		return self::$default_expires_by_table['*default'];
+		return self::$cache_expirations_by_table['*default'];
 	}
 
 	private function _getFromDatabase($sql) {
@@ -131,13 +131,7 @@ class CrushCache {
 				self::$sql_params['error_level']
 			);
 		}
-
 		return $this->sql_db->getOneRow($sql);
 	}
 
-
-
-
-}
-
-
+} // end CrushCache
