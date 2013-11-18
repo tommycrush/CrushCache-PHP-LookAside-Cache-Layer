@@ -2,19 +2,31 @@
 require('CrushCacheSQLWrapper.class.php');
 
 
-class CrushCache extends CrushCacheSQLWrapper {
+class CrushCache {
 
 	// array of table => indexed_column
 	private $indexed_columns_by_table = array(
 		"user" => "user_id",
-		"post" => "post_id",
 	);
 
 	private $cache, $sql_db;
 
-	public function __construct(){
+	private $sql_params = array(
+		'host' => 'localhost',
+		'username' => 'username',
+		'password' => 'password',
+		'database' => 'my_db_name',
+		'error_level' => 1,
+	);
+
+	public function __construct() {
 		$this->cache = null;
 		$this->sql_db = null;
+	}
+
+	public function __destruct(){
+		unset($this->cache);
+		unset($this->sql_db);
 	}
 
 	// for now, one at a time
@@ -56,6 +68,20 @@ class CrushCache extends CrushCacheSQLWrapper {
 		return null;
 	}
 
+
+	private function _getFromDatabase($sql) {
+		if ($this->sql_db === null) {
+			$this->sql_db = new CrushCacheSQLWrapper(
+				$this->sql_params['host'],
+				$this->sql_params['username'],
+				$this->sql_params['password'],
+				$this->sql_params['database'],
+				$this->sql_params['error_level']
+			);
+		}
+
+		return $this->sql_db->getOneRow($sql);
+	}
 
 
 
