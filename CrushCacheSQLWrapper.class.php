@@ -231,43 +231,10 @@ class CrushCacheSQLWrapper {
 	 *
 	 *
 	 */ 
-	public function smartInsert($table, $data){
+	public function smartInsert($table, $data, $multiple = false){
         //compose SQL
         $sql = "INSERT INTO `".$table."` (".
             implode(',',array_keys($data)).") VALUES ";
-	
-		if(is_array(reset($data))){
-			//multidimensional, a.k.a : insert more than 1 row
-			
-			$rows = array();
-			
-			//loop through 2d ARRAy
-			foreach($data as $row){
-				//build values
-				$row_sql = "(";
-				$x = 0;
-				foreach($row as $value){
-					if($x > 0){
-						$row_sql .= ",";
-					}
-					$row_sql .= "'".$this->escape($value)."'";
-					
-					$x++;
-				}
-				$row_sql .= ")";
-				$rows[] = $row_sql;
-			}
-			
-			
-			$sql .= implode(",",$rows);
-			
-			//because its multiple rows, let execute the query and just return true
-			$this->query($sql);
-			return true;
-			
-		}else{
-			
-			//not multidimensional, a.k.a : insert 1 row
 
 			//build values
 			$row_sql = "(";
@@ -284,7 +251,6 @@ class CrushCacheSQLWrapper {
 					$row_sql .= "'".$this->escape($value)."'";
 				}
 				
-					
 				$x++;
 			}
 		
@@ -294,8 +260,6 @@ class CrushCacheSQLWrapper {
 			
 			//because its only 1 row, lets just go ahead and return the insert_id
 			return $this->insertAndReturnID($sql);
-			
-		}//end if not multidimensional	
 	}
 
 	/*

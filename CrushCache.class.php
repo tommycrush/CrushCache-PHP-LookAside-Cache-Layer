@@ -59,7 +59,7 @@ class CrushCache {
 	}
 
 	/**
-	 * @function get
+	 * @function get()
 	 *
 	 * @param $table string
 	 *		MySQL table we're retrieving results from
@@ -70,6 +70,8 @@ class CrushCache {
      *      Key relating to the $index_column
      * @param $multiple_rows bool (optional, default = false)
      *      Is it possible to retrieve multiple rows from this search?
+     *			post, post_id, 5 => there is 1 post_id = 5
+     *			comment, post_id, 5, true => there could be several comments
      *
 	 * @return array()
 	 */
@@ -90,21 +92,58 @@ class CrushCache {
 		return $value;
 	}
 
-    public function insert($table, $data, $multiple = false) {
+
+	/**
+	 * @function insert()
+	 *		- Inserts a record into the SQL DB.
+	 *		- Checks if this insert invalidates other data
+	 *			Ex: A new comment on post # 5 would delete
+	 *			the key comment:post_id:5
+	 *
+	 * @param string $table
+	 *		SQL table to insert
+	 * @param array $data
+	 *		Array of column => value pairs
+	 *
+	 * @return $id int (if)
+	 *		result from wrapper->insert_id();
+	 */
+    public function insert($table, $data) {
         $this->_connectToSQL();
-        $this->sql_db->smartInsert($table, $data);
+        $id = $this->sql_db->smartInsert($table, $data);
         // does the table have indexed_columns?
         if (in_array($table, self::$indexed_columns_by_table)) {
             // clear the appropriate keys
             foreach(self::$indexed_columns_by_table[$table] as $column){
                 if (in_array($column, $data)) {
-                    $key = self::_composeCacheKey($table, $column,$data[$column]);
+                    $key = self::_composeCacheKey($table, $column, $data[$column]);
                     $this->_deleteCache($key);
                 }
             }
         }        
-        
+    	return $id;
     }
+
+	/**
+	 * @function update()
+	 *		- Update a record into the SQL DB.
+	 *		- Checks if this update invalidates other data
+	 *			Ex: An edit on post # 5 would delete
+	 *			the key post:post_id:5 but would also delete
+	 *			the post:author_id:(id of author)
+	 *
+	 * @param string $table
+	 *		SQL table to insert
+	 * @param array $update
+	 *		Array of column => value pairs
+	 * @param array $where
+	 *		$
+	 * @return true
+	 */
+    public function update($table, $data, $multiple = false) {
+    	//todo
+    }
+
 
 
 	/**
@@ -147,7 +186,13 @@ class CrushCache {
 		return $this->cache->set($key, $value, MEMCACHE_COMPRESSED, $expire);
 	}
 
+	// @returns cool
+	private function _deleteCache($key) {
+		$this->_connectToCache();
+		return $this->cache->delete($key);
+	}
 
+	// helper function
     private static function _composeCacheKey($table, $column, $value) {
         return $table.':'.$column.':'.$value;
     }
