@@ -226,9 +226,7 @@ class CrushCacheSQLWrapper {
 	 * @param array $columns
 	 *		example: array ("name","user_id")
 	 *
-	 * @param array | 2D array $data
-	 *		example: array("tommy",1) or array(array("tommy",1),array("sean",2))
-	 *
+	 * @param array 
 	 *
 	 */ 
 	public function smartInsert($table, $data, $multiple = false){
@@ -262,11 +260,52 @@ class CrushCacheSQLWrapper {
 			return $this->insertAndReturnID($sql);
 	}
 
+
+	/**
+	 * Performs a insertion query based on the parameters
+	 *
+	 * useful because it escapes all input for safer queries
+	 * 
+	 * @param string $table
+	 *
+	 * @param  2D array $data
+	 *		example: array(array(name => "tommy"),array("name" => "sean"))
+	 *		All internal arrays must have same keys present!
+	 *
+	 */ 
+	public function smartInsertMultiple($table, $data_arrays){
+        //compose SQL
+        $sql = "INSERT INTO `".$table."` (".
+            implode(',',array_keys($data_arrays[0])).") VALUES ";
+
+		$rows = array();
+		foreach($data_arrays as $data){
+			//build values
+			$row_sql = "(";
+			$x = 0;
+			foreach($data as $key => $value){
+				if($x > 0){
+					$row_sql .= ",";
+				}
+				if($value == "NOW()"){
+					$row_sql .= "NOW()";
+				}else{
+					$row_sql .= "'".$this->escape($value)."'";
+				}
+				$x++;
+			}
+		
+			$row_sql .= ")";		
+			$rows[] = $row_sql
+		}
+
+		$sql .= implode(',',$rows);
+		return true;
+	}
+
 	/*
 	 * END 'extras' FUNCTIONS
-	 */ 	
-	
-	
+	 */ 
 
 	
 	/*

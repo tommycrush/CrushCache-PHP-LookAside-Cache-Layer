@@ -8,8 +8,11 @@ class CrushCache {
     // The index is what you will cache by. For example,
     // comments may be stored in the cache in the following ways:
     //      comment:comment_id:5 # comment number 5
+    //			[this would be a single comment]
     //      comment:post_id:23 # all the comments under the post 23
+    //			[this would be an array of comments]
     //      comment:author_id:64 # all the comments written by 64
+    //			[this would be an array of comments]
     // They're only put in the cache when they're demanded.
     private static $indexed_columns_by_table = array(
         'user' => array('user_id'),
@@ -19,7 +22,7 @@ class CrushCache {
 	// array of table => cache expirations
 	// the # of seconds may not exceed 2592000 (30 days).
 	private static $cache_expirations_by_table = array(
-		'user' => 3600,
+		'user' => 3600, 
         'post' => 6000,
         'comment' => 1000,
         '*default' => 3600, // backup default value
@@ -92,7 +95,6 @@ class CrushCache {
 		return $value;
 	}
 
-
 	/**
 	 * @function insert()
 	 *		- Inserts a record into the SQL DB.
@@ -109,7 +111,7 @@ class CrushCache {
 	 *		result from wrapper->insert_id();
 	 */
     public function insert($table, $data) {
-        $this->_connectToSQL();
+        $this->_connectToSQL(); // ensure conneciton is good
         $id = $this->sql_db->smartInsert($table, $data);
         // does the table have indexed_columns?
         if (in_array($table, self::$indexed_columns_by_table)) {
@@ -122,6 +124,38 @@ class CrushCache {
             }
         }        
     	return $id;
+    }
+
+	/**
+	 * @function insertMultiple()
+	 *		- Inserts records into the SQL DB.
+	 *		- Checks if these new records invalidates other data
+	 *			Ex: A new comment on post # 5 would delete
+	 *			the key comment:post_id:5
+	 *
+	 * @param string $table
+	 *		SQL table to insert
+	 * @param array $data_arrays
+	 *		Array of Arrays of column => value pairs
+	 *
+	 * @return true
+	 */
+    public function insertMultiple($table, $data_arrays) {
+        $this->_connectToSQL(); // ensure conneciton is good
+        $this->sql_db->smartInsertMultiple($table, $data_arrays);
+        // does the table have indexed_columns?
+        foreach($data_arrays as $data) {
+	        if (in_array($table, self::$indexed_columns_by_table)) {
+	            // clear the appropriate keys
+	            foreach(self::$indexed_columns_by_table[$table] as $column){
+	                if (in_array($column, $data)) {
+	                    $key = self::_composeCacheKey($table, $column, $data[$column]);
+	                    $this->_deleteCache($key);
+	                }
+	            }
+	        }
+        } 
+    	return true;
     }
 
 	/**
@@ -143,7 +177,6 @@ class CrushCache {
     public function update($table, $data, $multiple = false) {
     	//todo
     }
-
 
 
 	/**
