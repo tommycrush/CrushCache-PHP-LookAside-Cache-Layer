@@ -99,7 +99,6 @@ class CrushCache {
 		if(!$value){
 			// not in cache, get from SQL and store
 			$value = $this->_getFromDatabase($sql, $limit_one);
-
 			if ($expiration == -1) {
 				$expiration = $this->_defaultCacheExpiration('*query');
 			}
@@ -132,7 +131,7 @@ class CrushCache {
 		return $this->cache->connect(
 			self::$cache_params['host'],
 			self::$cache_params['port'],
-			self::$cache_params['timeout'],
+			self::$cache_params['timeout']
 		);
 	}
 
