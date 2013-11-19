@@ -35,9 +35,14 @@ Next time this is run, we'll check to see if the key exists. If it does, no need
   $total["total"];
   
   
-  
-  
   // The Trade-off:
   // We have to invalidate the cache when we get new data for that query.
+  
+  // We can do this more efficiently. Let's get everything from the comment table where post_id = 5
+  $comments = $cache->get("comments", array("post_id" => 5));
+  // this will be cached in comments:post_id:5
+  $cache->delete("comments", array("post_id" => 5));
+  $cache->update("comments", array("post_id" => 5));
+  
 ?>
 ```
