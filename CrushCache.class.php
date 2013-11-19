@@ -1,21 +1,28 @@
 <?php
 require('CrushCacheSQLWrapper.class.php');
 
-
 class CrushCache {
-
 	/* 	BEGIN CONFIG */
 
-	// array of table => indexed_column
-	private static $indexed_columns_by_table = array(
-		'user' => 'user_id',
-	);
-
+    // table => array of key columns in table
+    // The index is what you will cache by. For example,
+    // comments may be stored in the cache in the following ways:
+    //      comment:comment_id:5 # comment number 5
+    //      comment:post_id:23 # all the comments under the post 23
+    //      comment:author_id:64 # all the comments written by 64
+    // They're only put in the cache when they're demanded.
+    private static $indexed_columns_by_table = array(
+        'user' => array('user_id'),
+        'post' => array('post_id','author_id'),
+        'comment' => array('comment_id','post_id','author_id'),
+    );
 	// array of table => cache expirations
 	// the # of seconds may not exceed 2592000 (30 days).
 	private static $cache_expirations_by_table = array(
 		'user' => 3600,
-		'*default' => 3600, // backup default value
+        'post' => 6000,
+        'comment' => 1000,
+        '*default' => 3600, // backup default value
 		'*query' => 3600, // default value for getQuery() storages
 	);
 
@@ -56,21 +63,25 @@ class CrushCache {
 	 *
 	 * @param $table string
 	 *		MySQL table we're retrieving results from
-	 * @param $indexed_column_value int/string
-	 *		ID of the object you want to retrieve
-	 *		Value of self::$indexed_columns_by_table
-	 *
-	 * @return array() [mysql row];
+	 * @param $index_column string
+     *      Column of the key
+     *		Value of self::$indexed_columns_by_table
+     * @param $key int
+     *      Key relating to the $index_column
+     * @param $multiple_rows bool (optional, default = false)
+     *      Is it possible to retrieve multiple rows from this search?
+     *
+	 * @return array()
 	 */
-	public function get($table, $indexed_column_value) {
-		$cache_key = $table.':'.$indexed_column_value;
+    public function get($table, $index_column, $key, $multiple_rows = false) {
+		$cache_key = $table.':'.$index_column.':'.$key;
 		$value = $this->_getFromCache($cache_key);
 		if(!$value){
 			// not in cache, get from SQL and store
 			$indexed_column = $this->indexed_columns_by_table[$table];
 			$sql = "SELECT * FROM ".$table." WHERE `".
-				$indexed_column."`= '".$indexed_column_value."' LIMIT 1";
-			$value = $this->_getFromDatabase($sql);
+				$index_column."`= '".$index_column;
+			$value = $this->_getFromDatabase($sql, $multiple_rows);
 
 			// save value in cache
 			$expiration = $this->_defaultCacheExpiration($table);
@@ -78,6 +89,23 @@ class CrushCache {
 		}
 		return $value;
 	}
+
+    public function insert($table, $data, $multiple = false) {
+        $this->_connectToSQL();
+        $this->sql_db->smartInsert($table, $data);
+        // does the table have indexed_columns?
+        if (in_array($table, self::$indexed_columns_by_table)) {
+            // clear the appropriate keys
+            foreach(self::$indexed_columns_by_table[$table] as $column){
+                if (in_array($column, $data)) {
+                    $key = self::_composeCacheKey($table, $column,$data[$column]);
+                    $this->_deleteCache($key);
+                }
+            }
+        }        
+        
+    }
+
 
 	/**
 	 * @function getFromQuery
@@ -119,6 +147,11 @@ class CrushCache {
 		return $this->cache->set($key, $value, MEMCACHE_COMPRESSED, $expire);
 	}
 
+
+    private static function _composeCacheKey($table, $column, $value) {
+        return $table.':'.$column.':'.$value;
+    }
+
 	// sets up connection to Memcache
 	// safe to call multiple times
 	// returns bool
@@ -143,8 +176,8 @@ class CrushCache {
 		return self::$cache_expirations_by_table['*default'];
 	}
 
-	private function _getFromDatabase($sql, $multiple_rows = false) {
-		if ($this->sql_db === null) {
+    private function _connectToSQL() {    
+        if ($this->sql_db === null) {
 			$this->sql_db = new CrushCacheSQLWrapper(
 				self::$sql_params['host'],
 				self::$sql_params['username'],
@@ -152,8 +185,14 @@ class CrushCache {
 				self::$sql_params['database'],
 				self::$sql_params['error_level']
 			);
-		}
-		if ($multiple_rows) {
+        }
+        return true;
+    }
+
+
+	private function _getFromDatabase($sql, $multiple_rows = false) {
+        $this->_connectToSQL();
+        if ($multiple_rows) {
 			return $this->sql_db->getMultipleRows($sql);
 		} else {
 			return $this->sql_db->getOneRow($sql);

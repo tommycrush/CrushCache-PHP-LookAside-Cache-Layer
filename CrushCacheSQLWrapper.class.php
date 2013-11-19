@@ -231,24 +231,10 @@ class CrushCacheSQLWrapper {
 	 *
 	 *
 	 */ 
-	public function smartInsert($table, $columns, $data){
-		//compose SQL
-		$sql = "INSERT INTO `".$table."` (";
-	
-		//create COLUMNS
-		$x = 0;
-		foreach($columns as $column){
-			if($x > 0){
-				$sql .= ",";
-			}
-
-			$sql .= "`".$column."`";
-			
-			$x++;
-		}
-		
-		//end COLUMNS
-		$sql .= ") VALUES ";
+	public function smartInsert($table, $data){
+        //compose SQL
+        $sql = "INSERT INTO `".$table."` (".
+            implode(',',array_keys($data)).") VALUES ";
 	
 		if(is_array(reset($data))){
 			//multidimensional, a.k.a : insert more than 1 row
@@ -257,7 +243,6 @@ class CrushCacheSQLWrapper {
 			
 			//loop through 2d ARRAy
 			foreach($data as $row){
-				
 				//build values
 				$row_sql = "(";
 				$x = 0;
