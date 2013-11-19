@@ -51,7 +51,17 @@ class CrushCache {
 		unset($this->sql_db);
 	}
 
-	// for now, one at a time
+	/**
+	 * @function get
+	 *
+	 * @param $table string
+	 *		MySQL table we're retrieving results from
+	 * @param $indexed_column_value int/string
+	 *		ID of the object you want to retrieve
+	 *		Value of self::$indexed_columns_by_table
+	 *
+	 * @return array() [mysql row];
+	 */
 	public function get($table, $indexed_column_value) {
 		$cache_key = $table.':'.$indexed_column_value;
 		$value = $this->_getFromCache($cache_key);
@@ -69,15 +79,26 @@ class CrushCache {
 		return $value;
 	}
 
-	// unsanitized input!! be sure to make the SQL secure before passing here!
-	public function getQuery($sql, $multiple_rows = false, $expiration = -1) {
+	/**
+	 * @function getFromQuery
+	 *
+	 * @param $sql string
+	 *		SQL to retrive data. This will not be cleaned!!!
+	 * @param $limit_one bool
+	 *		This SQL does/does not contain a "LIMIT 1" clause
+	 * @param $expiration int
+	 *		Number of seconds to cache the results of the query
+	 *
+	 * @return array() [mysql row] or array() of arrays() [mysql rows];
+	 */
+	public function getFromQuery($sql, $limit_one = false, $expiration = -1) {
 		// composes a key such as query:d8e8fca2dc0f896fd7cb4cb0031ba249
 		$cache_key = 'query:'.md5($sql);
 
 		$value = $this->_getFromCache($cache_key);
 		if(!$value){
 			// not in cache, get from SQL and store
-			$value = $this->_getFromDatabase($sql, $multiple_rows);
+			$value = $this->_getFromDatabase($sql, $limit_one);
 
 			if ($expiration == -1) {
 				$expiration = $this->_defaultCacheExpiration('*query');
@@ -123,7 +144,6 @@ class CrushCache {
 		return self::$cache_expirations_by_table['*default'];
 	}
 
-	// returns a single row of the 
 	private function _getFromDatabase($sql, $multiple_rows = false) {
 		if ($this->sql_db === null) {
 			$this->sql_db = new CrushCacheSQLWrapper(
