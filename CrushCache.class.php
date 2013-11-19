@@ -63,6 +63,9 @@ class CrushCache {
 
 	/**
 	 * @function get()
+	 *		Use when you want 1 record
+	 *		Example: get("comments","comment_id",60);
+	 *		Example: getMultiple("comments","post_id",5);
 	 *
 	 * @param $table string
 	 *		MySQL table we're retrieving results from
@@ -85,7 +88,8 @@ class CrushCache {
 			// not in cache, get from SQL and store
 			$indexed_column = $this->indexed_columns_by_table[$table];
 			$sql = "SELECT * FROM ".$table." WHERE `".
-				$index_column."`= '".$index_column;
+				$index_column."`= '".$index_column."'".
+				($multiple_rows ? '' : ' LIMIT 1');
 			$value = $this->_getFromDatabase($sql, $multiple_rows);
 
 			// save value in cache
@@ -93,6 +97,25 @@ class CrushCache {
 			$this->_setCache($cache_key, $value, $expiration);
 		}
 		return $value;
+	}
+
+	/**
+	 * @function getMultiple()
+	 *		Use when there are possibly >1 records
+	 *		Example: get("comments","comment_id",60);
+	 *		Example: getMultiple("comments","post_id",5);
+	 *
+	 * @param $table string
+	 *		MySQL table we're retrieving results from
+	 * @param $index_column string
+     *      Column of the key
+     *		Value of self::$indexed_columns_by_table
+     * @param $key int
+     *      Key relating to the $index_column
+	 * @return array(array(),array(),...)
+	 */
+    public function getMultiple($table, $index_column, $key) {
+		return $this->get($table, $index_column, $key, true);
 	}
 
 	/**
