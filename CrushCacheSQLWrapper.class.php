@@ -334,6 +334,10 @@ class CrushCacheSQLWrapper {
 				die();
 				break;
 
+			case 4:
+				throw new Exception("MySQL error");
+				break;
+
 			default:
 				die("ERROR HANDLING NOT SET");
 				break;

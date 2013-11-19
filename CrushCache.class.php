@@ -56,7 +56,7 @@ class CrushCache {
 
 	public function __destruct(){
 		// delete the cache and SQL objects
-		// Not necessary, but good form
+		// Not necessary, but let's do it for now.
 		unset($this->cache);
 		unset($this->sql_db);
 	}
@@ -247,9 +247,9 @@ class CrushCache {
 		$this->_connectToCache();
 		return $this->cache->delete($key);
 	}
-
+	
 	// helper function
-    private static function _composeCacheKey($table, $column, $value) {
+	private static function _composeCacheKey($table, $column, $value) {
         return $table.':'.$column.':'.$value;
     }
 
