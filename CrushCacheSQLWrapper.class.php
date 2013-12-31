@@ -65,10 +65,7 @@ class CrushCacheSQLWrapper {
 	 */ 
 	private function connect($host, $username, $password){
 		//create connection
-		$this->conn = @mysql_connect($host, $username, $password);
-		if(!$this->conn){
-			$this->error("Failure on connection.");
-		}
+		$this->conn = @mysql_connect($host, $username, $password) or $this->error('Failure on Connection!');
 	}
 	
 	/**
@@ -296,7 +293,7 @@ class CrushCacheSQLWrapper {
 			}
 		
 			$row_sql .= ")";		
-			$rows[] = $row_sql
+			$rows[] = $row_sql;
 		}
 
 		$sql .= implode(',',$rows);
@@ -325,8 +322,8 @@ class CrushCacheSQLWrapper {
 			case 1:
 				die($msg." [".mysql_error($this->conn)."]");
 				break;
-			
-			case 2: 
+
+			case 2:
 				die($msg);
 				break;
 			

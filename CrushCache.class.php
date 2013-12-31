@@ -1,6 +1,8 @@
 <?php
 require('CrushCacheSQLWrapper.class.php');
 
+error_reporting(E_ALL);
+
 class CrushCache {
 	/* 	BEGIN CONFIG */
 
@@ -31,16 +33,16 @@ class CrushCache {
 
 	// array of MySQL connection parameters
 	private static $sql_params = array(
-		'host' => 'localhost',
-		'username' => 'my_username',
-		'password' => 'my_password',
-		'database' => 'my_db_name',
+		'host' => '127.0.0.1:3306',
+		'username' => 'root', // my local dev enviro
+		'password' => '', // my local dev enviro
+		'database' => 'crush_cache', // my database name
 		'error_level' => 1,
 	);
 
 	// array of Memcache connection parameters
 	private static $cache_params = array(
-		'host' => 'localhost',
+		'host' => '127.0.0.1',
 		'port' => '11211',
 		'timeout' => 1, // don't increase! negates the point of memcache.
 	);
@@ -201,7 +203,6 @@ class CrushCache {
     	//todo
     }
 
-
 	/**
 	 * @function getFromQuery
 	 *
@@ -247,7 +248,7 @@ class CrushCache {
 		$this->_connectToCache();
 		return $this->cache->delete($key);
 	}
-	
+
 	// helper function
 	private static function _composeCacheKey($table, $column, $value) {
         return $table.':'.$column.':'.$value;
@@ -279,6 +280,8 @@ class CrushCache {
 
     private function _connectToSQL() {    
         if ($this->sql_db === null) {
+        	print_r(self::$sql_params);
+
 			$this->sql_db = new CrushCacheSQLWrapper(
 				self::$sql_params['host'],
 				self::$sql_params['username'],
@@ -289,7 +292,6 @@ class CrushCache {
         }
         return true;
     }
-
 
 	private function _getFromDatabase($sql, $multiple_rows = false) {
         $this->_connectToSQL();
